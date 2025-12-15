@@ -13,6 +13,10 @@
 //   html->append(ptr, size * nmemb);
 //   return size * nmemb;
 // }
+// size_t write_file(char* ptr, size_t size, size_t nmemb, void* userdata) {
+//   FILE* fp = static_cast<FILE*>(userdata);
+//   return fwrite(ptr, size, nmemb, fp);
+// }
 size_t write_data(char* ptr, size_t size, size_t nmemb, void* userdata) {
   char** html = static_cast<char**>(userdata);
   size_t len = strlen(*html);
@@ -27,10 +31,6 @@ size_t write_data(char* ptr, size_t size, size_t nmemb, void* userdata) {
 
   return size * nmemb;
 }
-// size_t write_file(char* ptr, size_t size, size_t nmemb, void* userdata) {
-//   FILE* fp = static_cast<FILE*>(userdata);
-//   return fwrite(ptr, size, nmemb, fp);
-// }
 
 static void search_for_links(GumboNode* node, std::vector<std::string>* links) {
   if (node->type != GUMBO_NODE_ELEMENT) {
@@ -39,7 +39,7 @@ static void search_for_links(GumboNode* node, std::vector<std::string>* links) {
   GumboAttribute* href;
   if (node->v.element.tag == GUMBO_TAG_A &&
       (href = gumbo_get_attribute(&node->v.element.attributes, "href"))) {
-    // std::cout << href->value << std::endl;
+    std::cout << href->value << std::endl;
     (*links).push_back(href->value);
   }
 
@@ -70,7 +70,7 @@ int main() {
   search_for_links(output->root, links);
   gumbo_destroy_output(&kGumboDefaultOptions, output);
 
-  std::cout << *links[1];
+  std::cout << (*links)[1];
 
   free(html);
   return 0;
