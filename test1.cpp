@@ -39,7 +39,7 @@ static void search_for_links(GumboNode* node, std::vector<std::string>* links) {
   GumboAttribute* href;
   if (node->v.element.tag == GUMBO_TAG_A &&
       (href = gumbo_get_attribute(&node->v.element.attributes, "href"))) {
-    std::cout << href->value << std::endl;
+    // std::cout << href->value << std::endl;
     (*links).push_back(href->value);
   }
 
