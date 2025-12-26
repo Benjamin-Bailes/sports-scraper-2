@@ -13,7 +13,7 @@
 #include "retrievehtml.h"
 
 int main() {
-  char url[] = "https://www.sportsbet.com.au/racing-schedule/horse/today";
+  const char url[] = "https://www.sportsbet.com.au/racing-schedule/horse/today";
   // char* todays_html = (char*)malloc(1);
   char* todays_html = static_cast<char*>(std::malloc(1));
   if (!todays_html) return 1;
@@ -31,10 +31,21 @@ int main() {
   }
   std::cout << 2 << std::endl;
 
-  Race race1 = Race(links[0]);
+  std::vector<Race> races;
+  for (int i = 0; i < links.size(); i++) {
+    races.emplace_back(links[i]);
+  }
 
-  // std::cout << race1.get_html() << std::endl;
+  // Race race1 = Race(links[2]);
+  // std::cout << links[0] << std::endl;
 
+  // for (auto t : race1.get_horses()) {
+  //   std::cout << t.name << " " << t.win_odds << " " << t.place_odds << " _______ " << t.position << '\n';
+  // }
+
+  // for (auto t : race1.get_win_odds()) {
+  //   std::cout << t << std::endl;
+  // }
   // FILE* out = fopen("page.html", "wb");  // write binary output
   // if (!out) return 1;
   // fprintf(out, "%s", race1.get_html());

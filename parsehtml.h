@@ -9,12 +9,11 @@
 
 void search_for_links(GumboNode* node, std::vector<std::string>* links);
 
-// should use a template, std::vector<T>&, so I can switch between string (copy)
-// and const char* gumbo owned refrence. if I use constexpr in a conditional
-// statment in the function this will have zero overhead.
+// get text in a node
 void get_text(GumboNode* node, std::vector<std::string>& out);
+// return text in desired divs
+void search_in_divs(GumboNode* node, std::vector<std::string>& out, const char* _attribute, const char* attribute_value);
 
-void search_html_divs(GumboNode* node, std::vector<std::string>& out,
-                      char* _attribute, char* attribute_value);
+GumboNode* get_div(GumboNode* node, const char* _attribute, const char* attribute_value);
 
 #endif

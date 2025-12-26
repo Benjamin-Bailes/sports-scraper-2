@@ -5,14 +5,15 @@
 
 class Horse {
  public:
-  int id;
   std::string name;
   std::string race;
   float win_odds;
   float place_odds;
   int position;
 
-  Horse(const std::string& name);
+  Horse(std::string _name, float _win_odds, float _place_odds);
+
+  void set_position(int _position);
 };
 
 #endif
