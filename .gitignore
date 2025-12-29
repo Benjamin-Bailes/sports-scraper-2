@@ -45,3 +45,6 @@
 # other
 *.html
 *.vscode
+testing
+out
+cookies.txt

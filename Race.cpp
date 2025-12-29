@@ -9,8 +9,9 @@
 
 #include "Horse.h"
 #include "parsehtml.h"
-#include "retrievehtml.h"
+#include "retrievehtml.hpp"
 
+/*
 Race::Race(std::string _url) {
   if (_url.empty()) return;
   this->url = _url;
@@ -18,7 +19,7 @@ Race::Race(std::string _url) {
   this->html = (char*)malloc(1);
   if (!this->html) return;
   this->html[0] = '\0';
-  retrieve_html(&this->html, this->url.c_str());
+  retrieve_html(this->html, this->url.c_str());
   std::cout << 3 << std::endl;
 
   this->gumbo_output = gumbo_parse(this->html);
@@ -29,14 +30,27 @@ Race::Race(std::string _url) {
   clean_data();
   construct_horses();
 }
+*/
+Race::Race(std::string _url, const char* _html) {
+  this->url = _url;
+  if (!_html) return;
+  this->html = _html;
+
+  this->gumbo_output = gumbo_parse(this->html);
+  if (!this->gumbo_output) return;
+
+  get_initial_data();
+  clean_data();
+  construct_horses();
+}
 Race::~Race() {
   // delete[] this->url;
-  free(this->html);
+  // free(this->html);
 }
 
 //
 // getset
-char* Race::get_html() { return this->html; }
+const char* Race::get_html() { return this->html; }
 std::vector<Horse> Race::get_horses() { return this->horses; }
 std::vector<std::string> Race::get_names() { return this->names; }
 std::vector<std::string> Race::get_win_odds() { return this->win_odds; }
@@ -45,6 +59,7 @@ std::vector<std::string> Race::get_place_names() { return this->place_odds; }
 //
 // protected
 void Race::get_initial_data() {
+  if (!this->gumbo_output) return;
   GumboNode* root_node = gumbo_output->root;
   if (root_node->type != GUMBO_NODE_ELEMENT) return;
 
@@ -80,7 +95,8 @@ void Race::clean_data() {
     } else {
       names.erase(names.begin() + i);
     }
-  }  // not sure if this is safe. will it always terminate
+  }  // not sure if this is safe. will it always terminate?
+
   // clean postion names
   i = 0;
   while (i < ordered_winning_names.size()) {
@@ -94,14 +110,31 @@ void Race::clean_data() {
     }
   }
 
+  // clean odds
+  for (int i = 0; i < win_odds.size(); i++) {
+    try {
+      win_odds_f.push_back(std::stof(this->win_odds[i]));
+    } catch (const std::exception& e) {
+    }
+  }
+  for (int i = 0; i < place_odds.size(); i++) {
+    try {
+      place_odds_f.push_back(std::stof(this->place_odds[i]));
+    } catch (const std::exception& e) {
+    }
+  }
+
   return;
 }
 
 void Race::construct_horses() {
+  std::string _name;
+  float _win_odds, _place_odds;
+
   for (int i = 0; i < names.size(); i++) {
-    std::string _name = (!this->names[i].empty()) ? this->names[i] : "";
-    float _win_odds = (!this->win_odds[i].empty()) ? std::stof(this->win_odds[i]) : 0;
-    float _place_odds = (!this->place_odds[i].empty()) ? std::stof(this->place_odds[i]) : 0;
+    _name = (!this->names[i].empty()) ? this->names[i] : "";
+    _win_odds = win_odds_f[i] ? win_odds_f[i] : 0;
+    _place_odds = place_odds_f[i] ? place_odds_f[i] : 0;
 
     this->horses.emplace_back(_name, _win_odds, _place_odds);
   }

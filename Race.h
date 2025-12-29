@@ -8,13 +8,13 @@
 #include <vector>
 
 #include "Horse.h"
-#include "retrievehtml.h"
+#include "retrievehtml.hpp"
 
 class Race {
  protected:
   // source
   std::string url;
-  char* html;
+  const char* html;
   GumboOutput* gumbo_output;
 
   // raw data
@@ -23,6 +23,8 @@ class Race {
   std::vector<std::string> ordered_winning_names;  // vector in order of finishing position (does not contain all horses - need to run js to do that)
   std::vector<std::string> win_odds;
   std::vector<std::string> place_odds;
+  std::vector<float> win_odds_f;
+  std::vector<float> place_odds_f;
 
   // nice data
   std::string race_name;
@@ -33,13 +35,15 @@ class Race {
   void construct_horses();
 
  public:
-  Race(std::string _url);
+  // Race(std::string _url);
+  Race(std::string _url, const char* _html);
   ~Race();
 
+  /*
   // TO HELP WITH CONSTRUCTING IN A VECTOR - something to do with copying resulting in double free malloc error
-  // Race(const Race&) {
-  //   std::cerr << "COPY\n";
-  // }
+  Race(const Race&) {
+    std::cerr << "COPY\n";
+  }
   Race(const Race&) = delete;
   Race& operator=(const Race&) = delete;
   Race(Race&& other) noexcept : html(other.html) {
@@ -54,9 +58,10 @@ class Race {
     return *this;
   }
   //
+  */
 
   // getset
-  char* get_html();
+  const char* get_html();
   std::vector<Horse> get_horses();
   std::vector<std::string> get_names();
   std::vector<std::string> get_win_odds();
