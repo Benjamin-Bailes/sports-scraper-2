@@ -35,8 +35,10 @@ std::vector<Request> asyncdownloads(std::vector<std::string>& links) {
     curl_easy_setopt(easy, CURLOPT_WRITEFUNCTION, CurlWriter<std::string>::write);
     curl_easy_setopt(easy, CURLOPT_WRITEDATA, &responses[easy]);
 
-    curl_easy_setopt(easy, CURLOPT_FOLLOWLOCATION, 1L);                                     // accept redirects - default is upto 50 i think
-    curl_easy_setopt(easy, CURLOPT_USERAGENT, "Mozilla/5.0 (compatible; async-curl/1.0)");  // help pretend to be browser I think
+    curl_easy_setopt(easy, CURLOPT_FOLLOWLOCATION, 1L);  // accept redirects - default is upto 50 i think
+    curl_easy_setopt(easy, CURLOPT_USERAGENT,
+                     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                     "(KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36");  // help pretend to be browser I think: Mozilla/5.0 (compatible; async-curl/1.0)
     curl_easy_setopt(easy, CURLOPT_COOKIEFILE, "");
     curl_easy_setopt(easy, CURLOPT_COOKIEJAR, "cookies.txt");
 

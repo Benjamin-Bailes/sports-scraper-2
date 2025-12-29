@@ -44,13 +44,14 @@ Race::Race(std::string _url, const char* _html) {
   construct_horses();
 }
 Race::~Race() {
-  // delete[] this->url;
   // free(this->html);
 }
 
 //
 // getset
 const char* Race::get_html() { return this->html; }
+std::string Race::get_url() { return this->url; }
+bool Race::is_race_complete() { return this->race_complete; }
 std::vector<Horse> Race::get_horses() { return this->horses; }
 std::vector<std::string> Race::get_names() { return this->names; }
 std::vector<std::string> Race::get_win_odds() { return this->win_odds; }
@@ -111,16 +112,22 @@ void Race::clean_data() {
   }
 
   // clean odds
-  for (int i = 0; i < win_odds.size(); i++) {
+  i = 0;
+  while (i < win_odds.size()) {
     try {
-      win_odds_f.push_back(std::stof(this->win_odds[i]));
+      this->win_odds_f.push_back(std::stof(this->win_odds[i]));
+      i++;
     } catch (const std::exception& e) {
+      win_odds.erase(win_odds.begin() + i);  // update string version too
     }
   }
-  for (int i = 0; i < place_odds.size(); i++) {
+  i = 0;
+  while (i < place_odds.size()) {
     try {
-      place_odds_f.push_back(std::stof(this->place_odds[i]));
+      this->place_odds_f.push_back(std::stof(this->place_odds[i]));
+      i++;
     } catch (const std::exception& e) {
+      place_odds.erase(place_odds.begin() + i);
     }
   }
 
@@ -129,25 +136,34 @@ void Race::clean_data() {
 
 void Race::construct_horses() {
   std::string _name;
-  float _win_odds, _place_odds;
+  std::string _win_odds, _place_odds;
+  // float _win_odds_f, _place_odds_f;
 
   for (int i = 0; i < names.size(); i++) {
     _name = (!this->names[i].empty()) ? this->names[i] : "";
-    _win_odds = win_odds_f[i] ? win_odds_f[i] : 0;
-    _place_odds = place_odds_f[i] ? place_odds_f[i] : 0;
+    // _win_odds_f = win_odds_f[i] ? win_odds_f[i] : 0;
+    // _place_odds_f = place_odds_f[i] ? place_odds_f[i] : 0;
+    _win_odds = (i < win_odds.size()) ? win_odds[i] : "";
+    _place_odds = (i < place_odds.size()) ? place_odds[i] : "";
 
     this->horses.emplace_back(_name, _win_odds, _place_odds);
   }
 
   // set positions
   int _position = 1;
-  for (std::string _pos_name : this->ordered_winning_names) {
-    for (Horse& _horse : this->horses) {
-      if (_pos_name == _horse.name) {
-        _horse.set_position(_position);
+  if (ordered_winning_names.size() == 0) {
+    this->race_complete = false;
+  } else {
+    this->race_complete = true;
+
+    for (std::string _pos_name : this->ordered_winning_names) {
+      for (Horse& _horse : this->horses) {
+        if (_pos_name == _horse.name) {
+          _horse.set_position(_position);
+        }
       }
+      _position++;
     }
-    _position++;
   }
 
   return;

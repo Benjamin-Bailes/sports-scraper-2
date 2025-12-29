@@ -19,6 +19,7 @@ class Race {
 
   // raw data
   // std::vector<const char*> name_reffs;
+  bool race_complete;
   std::vector<std::string> names;
   std::vector<std::string> ordered_winning_names;  // vector in order of finishing position (does not contain all horses - need to run js to do that)
   std::vector<std::string> win_odds;
@@ -62,6 +63,8 @@ class Race {
 
   // getset
   const char* get_html();
+  std::string get_url();
+  bool is_race_complete();
   std::vector<Horse> get_horses();
   std::vector<std::string> get_names();
   std::vector<std::string> get_win_odds();

@@ -2,10 +2,10 @@
 #include <gumbo.h>
 
 #include <cstdlib>
-#include <cstring>
+// #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "Horse.h"
@@ -87,29 +87,65 @@ int main() {
 
   // get html asynchronously from each race page
   std::vector<Request> requests = asyncdownloads(links);
+  std::cout << "\n";
   // for (auto request : requests) {
   //   std::cout << "Downloaded from: " << request.url << "\n";
   //   std::cout << "Size: " << request.html.size() << " bytes\n\n";
   // }
 
+  int num_races = requests.size();
+  int i = 0;
   std::vector<Race> races;
-  for (auto request : requests) {
+  for (auto& request : requests) {
     races.emplace_back(request.url, request.html.c_str());
+    std::cout << "\33[2K\rparsing: " << static_cast<float>(i) / num_races * 100 << "%" << std::flush;
+    i++;
   }
+  std::cout << "\n";
 
-  for (int i = 0; i < 10; i++) {
-    std::string name;
-    name = "out/page" + std::to_string(i) + ".html";
-    std::string total = requests[i].url + requests[i].html;
-    FILE* out = fopen(name.c_str(), "wb");  // write binary output
-    if (!out) return 1;
-    fprintf(out, "%s", total.c_str());
-    fclose(out);
-  }
-
-  // for (auto t : races[0].get_horses()) {
-  //   std::cout << t.name << " " << t.win_odds << " " << t.place_odds << " _______ " << t.position << '\n';
+  //
+  //
+  // for (int i = 0; i < 10; i++) {
+  //   std::string name;
+  //   name = "out/page" + std::to_string(i) + ".html";
+  //   std::string total = requests[i].url + requests[i].html;
+  //   FILE* out = fopen(name.c_str(), "wb");  // write binary output
+  //   if (!out) return 1;
+  //   fprintf(out, "%s", total.c_str());
+  //   fclose(out);
   // }
+  //
+  //
+
+  std::ofstream output_file;
+  output_file.open("out/data3.csv");
+
+  i = 0;
+  std::string race_url;
+  std::string row = "name, win odds, place odds, position, race url\n";
+  output_file << row;
+
+  for (Race& race : races) {
+    row.clear();
+    race_url.clear();
+    race_url = race.get_url();
+
+    if (race.is_race_complete()) {
+      for (Horse& horse : race.get_horses()) {
+        row = horse.name + "," + horse.win_odds + "," + horse.place_odds + "," + std::to_string(horse.position) + "," + race_url + "\n";
+        output_file << row;
+      }
+    } else {
+      row = "XX,XX,XX,XX," + race_url + "," + std::string(race.get_html(), 0, 41) + "\n";
+      output_file << row;
+    }
+
+    std::cout << "\33[2K\ruploading: " << static_cast<float>(i) / num_races * 100 << "%" << std::flush;
+    i++;
+  }
+
+  output_file.close();
+  std::cout << "\n";
 
   return 0;
 }
