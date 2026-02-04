@@ -45,6 +45,26 @@ void get_text(GumboNode* node, std::vector<std::string>& out) {
       get_text(static_cast<GumboNode*>(children->data[i]), out);
     }
   }
+
+  return;
+}
+
+std::string get_first_text(GumboNode* node) {
+  if (!node) return "";
+  if (node->type == GUMBO_NODE_TEXT) {
+    std::string text = node->v.text.text;
+    return text;
+  }
+
+  if (node->type == GUMBO_NODE_ELEMENT) {
+    GumboVector* children = &node->v.element.children;
+    for (int i = 0; i < children->length; ++i) {
+      std::string text = get_first_text(static_cast<GumboNode*>(children->data[i]));
+      if (!text.empty()) return text;
+    }
+  }
+
+  return "";
 }
 
 //
@@ -69,10 +89,38 @@ void search_in_divs(GumboNode* node, std::vector<std::string>& out, const char* 
   for (int i = 0; i < children->length; ++i) {
     search_in_divs(static_cast<GumboNode*>(children->data[i]), out, _attribute, attribute_value);
   }
+
+  return;
 }
 
 //
 //
+std::string get_text_from_first_div(GumboNode* node, const char* _attribute, const char* attribute_value) {
+  if (!node) return "";
+  if (node->type != GUMBO_NODE_ELEMENT) return "";
+
+  GumboAttribute* attribute;
+  if (node->v.element.tag == GUMBO_TAG_DIV &&
+      (attribute = gumbo_get_attribute(&node->v.element.attributes, _attribute))) {
+    // check for example that the attribute value
+    if (strstr(attribute_value, attribute->value) != NULL) {
+      std::string text = get_first_text(node);
+      return text;
+    }
+  }
+
+  // recursive
+  GumboVector* children = &node->v.element.children;
+  for (int i = 0; i < children->length; ++i) {
+    std::string text = get_text_from_first_div(static_cast<GumboNode*>(children->data[i]), _attribute, attribute_value);
+    if (!text.empty()) return text;
+  }
+
+  return "";
+}
+
+//
+// first div
 GumboNode* get_div(GumboNode* node, const char* _attribute, const char* attribute_value) {
   if (!node) return NULL;
   if (node->type == GUMBO_NODE_ELEMENT) {
@@ -93,4 +141,29 @@ GumboNode* get_div(GumboNode* node, const char* _attribute, const char* attribut
   }
 
   return NULL;
+}
+
+//
+//
+// by reference to avoid returning in recursive funciton
+void get_all_divs(GumboNode* curr_node, std::vector<GumboNode*>& matching_nodes, const char* _attribute, const char* attribute_value) {
+  if (!curr_node) return;
+
+  if (curr_node->type == GUMBO_NODE_ELEMENT) {
+    GumboAttribute* attribute;
+    if (curr_node->v.element.tag == GUMBO_TAG_DIV &&
+        (attribute = gumbo_get_attribute(&curr_node->v.element.attributes, _attribute))) {
+      if (strstr(attribute->value, attribute_value) != NULL) {
+        // std::cout << attribute->value << std::endl;
+        matching_nodes.emplace_back(curr_node);
+      }
+    }
+
+    GumboVector* children = &curr_node->v.element.children;
+    for (int i = 0; i < children->length; ++i) {
+      get_all_divs(static_cast<GumboNode*>(children->data[i]), matching_nodes, _attribute, attribute_value);
+    }
+  }
+
+  return;
 }

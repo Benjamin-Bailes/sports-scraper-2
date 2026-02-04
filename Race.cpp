@@ -39,12 +39,10 @@ Race::Race(std::string _url, const char* _html) {
   this->gumbo_output = gumbo_parse(this->html);
   if (!this->gumbo_output) return;
 
-  get_initial_data();
-  clean_data();
-  construct_horses();
-}
-Race::~Race() {
-  // free(this->html);
+  get_data();
+
+  // clean_data();
+  // construct_horses();
 }
 
 //
@@ -53,57 +51,63 @@ const char* Race::get_html() { return this->html; }
 std::string Race::get_url() { return this->url; }
 bool Race::is_race_complete() { return this->race_complete; }
 std::vector<Horse> Race::get_horses() { return this->horses; }
-std::vector<std::string> Race::get_names() { return this->names; }
-std::vector<std::string> Race::get_win_odds() { return this->win_odds; }
-std::vector<std::string> Race::get_place_names() { return this->place_odds; }
+// std::vector<std::string> Race::get_names() { return this->names; }
+// std::vector<std::string> Race::get_win_odds() { return this->win_odds; }
+// std::vector<std::string> Race::get_place_names() { return this->place_odds; }
 
 //
 // protected
-void Race::get_initial_data() {
+void Race::get_data() {
   if (!this->gumbo_output) return;
   GumboNode* root_node = gumbo_output->root;
   if (root_node->type != GUMBO_NODE_ELEMENT) return;
 
   const char att[] = "data-automation-id";
+  const char class_att[] = "class";
+
+  const char racecard_att_val[] = "racecard-body";
+  const char racecard_outcome_att_val[] = "outcomeCard_f7jc198";
+
   const char name_att_val[] = "racecard-outcome-name";
   const char win_odds_att_val[] = "racecard-outcome-0-L-price";
   const char place_odds_att_val[] = "racecard-outcome-1-L-price";
+  const char flucs_att_val[] = "priceFlucsContainer_f1qh6j2w";
 
   // get half way down tree first. This ensures duplicate names (and stats) are not picked up from other nodes
-  char racecard_att_val[] = "racecard-body";
   GumboNode* racecard_node = get_div(root_node, att, racecard_att_val);
-  search_in_divs(racecard_node, this->names, att, name_att_val);
-  search_in_divs(racecard_node, this->win_odds, att, win_odds_att_val);
-  search_in_divs(racecard_node, this->place_odds, att, place_odds_att_val);
+
+  std::vector<GumboNode*> racecard_outcomes;
+  get_all_divs(racecard_node, racecard_outcomes, class_att, racecard_outcome_att_val);
+
+  // constuct horses
+  for (auto& racecard_outcome : racecard_outcomes) {
+    std::string _name = get_text_from_first_div(racecard_outcome, att, name_att_val);
+    std::string _win_odds = get_text_from_first_div(racecard_outcome, att, win_odds_att_val);
+    std::string _place_odds = get_text_from_first_div(racecard_outcome, att, place_odds_att_val);
+
+    std::vector<std::string> curr_flucs;
+    search_in_divs(racecard_outcome, curr_flucs, class_att, flucs_att_val);
+
+    if (!_name.empty()) {
+      this->horses.emplace_back(_name, _win_odds, _place_odds);
+      if (curr_flucs.size() == 3) {
+        horses.back().set_fluc_open(curr_flucs[0]);
+        horses.back().set_fluc_1(curr_flucs[1]);
+        horses.back().set_fluc_2(curr_flucs[2]);
+      }
+    }
+  }
 
   // top 4 positions, displayed in order, contained in top div of racecard
   GumboNode* racecard_positions_node = get_div(root_node, "class", "container_fqa53j6");
-  search_in_divs(racecard_positions_node, this->ordered_winning_names, att, name_att_val);
 
-  return;
-}
-
-void Race::clean_data() {
-  // clean names vector
-  size_t nameStart, nameEnd;
+  std::vector<std::string> ordered_winning_names;
+  search_in_divs(racecard_positions_node, ordered_winning_names, att, name_att_val);
   int i = 0;
-  while (i < names.size()) {
-    if (names[i].find(". ") != std::string::npos) {
-      nameStart = names[i].find(". ") + 2;
-      nameEnd = names[i].size();
-      names[i] = names[i].substr(nameStart, nameEnd - nameStart);
-      i++;
-    } else {
-      names.erase(names.begin() + i);
-    }
-  }  // not sure if this is safe. will it always terminate?
-
-  // clean postion names
-  i = 0;
   while (i < ordered_winning_names.size()) {
     if (ordered_winning_names[i].find(". ") != std::string::npos) {
-      nameStart = ordered_winning_names[i].find(". ") + 2;
-      nameEnd = ordered_winning_names[i].size();
+      size_t nameStart = ordered_winning_names[i].find(". ") + 2;
+      size_t nameEnd = ordered_winning_names[i].size();
       ordered_winning_names[i] = ordered_winning_names[i].substr(nameStart, nameEnd - nameStart);
       i++;
     } else {
@@ -111,55 +115,16 @@ void Race::clean_data() {
     }
   }
 
-  // clean odds
-  i = 0;
-  while (i < win_odds.size()) {
-    try {
-      this->win_odds_f.push_back(std::stof(this->win_odds[i]));
-      i++;
-    } catch (const std::exception& e) {
-      win_odds.erase(win_odds.begin() + i);  // update string version too
-    }
-  }
-  i = 0;
-  while (i < place_odds.size()) {
-    try {
-      this->place_odds_f.push_back(std::stof(this->place_odds[i]));
-      i++;
-    } catch (const std::exception& e) {
-      place_odds.erase(place_odds.begin() + i);
-    }
-  }
-
-  return;
-}
-
-void Race::construct_horses() {
-  std::string _name;
-  std::string _win_odds, _place_odds;
-  // float _win_odds_f, _place_odds_f;
-
-  for (int i = 0; i < names.size(); i++) {
-    _name = (!this->names[i].empty()) ? this->names[i] : "";
-    // _win_odds_f = win_odds_f[i] ? win_odds_f[i] : 0;
-    // _place_odds_f = place_odds_f[i] ? place_odds_f[i] : 0;
-    _win_odds = (i < win_odds.size()) ? win_odds[i] : "";
-    _place_odds = (i < place_odds.size()) ? place_odds[i] : "";
-
-    this->horses.emplace_back(_name, _win_odds, _place_odds);
-  }
-
-  // set positions
   int _position = 1;
   if (ordered_winning_names.size() == 0) {
     this->race_complete = false;
   } else {
     this->race_complete = true;
 
-    for (std::string _pos_name : this->ordered_winning_names) {
+    for (std::string _pos_name : ordered_winning_names) {
       for (Horse& _horse : this->horses) {
-        if (_pos_name == _horse.name) {
-          _horse.set_position(_position);
+        if (_pos_name == _horse.get_name()) {
+          _horse.set_position(std::to_string(_position));
         }
       }
       _position++;
@@ -169,70 +134,92 @@ void Race::construct_horses() {
   return;
 }
 
-/*
-  // order of names: finishes, then whole fleet,
-  // need to keep order of fleet without duplications
-  // keep first finishers for finish data - use different vectors
+/* 
 
-  // sort into names, and names of horses that placed (top positions are in a
-  // different div / doesnt contain all horses, just top 4, order matters I
-  // think as then we can retrice less data (ie position int)
+// void Race::clean_data() {
+//   // clean names vector
+//   size_t nameStart, nameEnd;
+//   int i = 0;
+//   while (i < names.size()) {
+//     if (names[i].find(". ") != std::string::npos) {
+//       nameStart = names[i].find(". ") + 2;
+//       nameEnd = names[i].size();
+//       names[i] = names[i].substr(nameStart, nameEnd - nameStart);
+//       i++;
+//     } else {
+//       names.erase(names.begin() + i);
+//     }
+//   }  // not sure if this is safe. will it always terminate?
 
-  // different order than I thought - more divs containg stats and names
-  // for (int i = names.size(); i >= 0; i--) {
-  //   bool exists = std::any_of(
-  //       names.end() - i, names.end(),
-  //       [&](const std::string& _name) { return _name == names[i]; });
-  //   if (exists) {
-  //     std::cout << names[i] << std::endl;
-  //   }
-  // }
+//   // clean postion names
+//   i = 0;
+//   while (i < ordered_winning_names.size()) {
+//     if (ordered_winning_names[i].find(". ") != std::string::npos) {
+//       nameStart = ordered_winning_names[i].find(". ") + 2;
+//       nameEnd = ordered_winning_names[i].size();
+//       ordered_winning_names[i] = ordered_winning_names[i].substr(nameStart, nameEnd - nameStart);
+//       i++;
+//     } else {
+//       ordered_winning_names.erase(ordered_winning_names.begin() + i);
+//     }
+//   }
 
-  // for (std::vector<std::string>::iterator it = names.end(); it !=
-  // names.begin();
-  //      it--) {
-  //   bool exists =
-  //       std::any_of(it + 1, names.end(),
-  //                   [&](const std::string& _name) { return _name == *it; });
-  //   if (exists) {
-  //     std::cout << *it << std::endl;
-  //   }
-  // }
+//   // clean odds
+//   i = 0;
+//   while (i < win_odds.size()) {
+//     try {
+//       this->win_odds_f.push_back(std::stof(this->win_odds[i]));
+//       i++;
+//     } catch (const std::exception& e) {
+//       win_odds.erase(win_odds.begin() + i);  // update string version too
+//     }
+//   }
+//   i = 0;
+//   while (i < place_odds.size()) {
+//     try {
+//       this->place_odds_f.push_back(std::stof(this->place_odds[i]));
+//       i++;
+//     } catch (const std::exception& e) {
+//       place_odds.erase(place_odds.begin() + i);
+//     }
+//   }
 
-  // ------------------------------------
-  // for (int i = 0; i < names.size(); ++i) {
-  //   if (names[i].find(". ") != std::string::npos) {
-  //     nameStart = names[i].find(". ") + 2;
-  //     nameEnd = names[i].size();
+//   return;
+// }
 
-  //     names[i] = names[i].substr(nameStart, nameEnd - nameStart);
+// void Race::construct_horses() {
+//   std::string _name;
+//   std::string _win_odds, _place_odds;
+//   // float _win_odds_f, _place_odds_f;
 
-  //     // // check if allready a horse
-  //     // bool exists = std::any_of(
-  //     //     horses.begin(), horses.end(),
-  //     //     [&](const Horse& horse) { return horse.name == names[i]; });
-  //     // if (!exists) {
-  //     //   this->horses.emplace_back(names[i]);
-  //     // }
+//   for (int i = 0; i < names.size(); i++) {
+//     _name = (!this->names[i].empty()) ? this->names[i] : "";
+//     // _win_odds_f = win_odds_f[i] ? win_odds_f[i] : 0;
+//     // _place_odds_f = place_odds_f[i] ? place_odds_f[i] : 0;
+//     _win_odds = (i < win_odds.size()) ? win_odds[i] : "";
+//     _place_odds = (i < place_odds.size()) ? place_odds[i] : "";
 
-  //   } else {
-  //     names[i].erase();
-  //   }
-  // }
-  //
-  // for (std::vector<std::string>::iterator name = names.end();
-  //      name != names.begin(); name--) {
-  //   bool exists =
-  //       std::any_of(name - 1, names.end(),
-  //                   [&](const std::string& _name) { return _name == *name;
-  //                   });
-  //   if (exists) {
-  //     std::cout << *name << std::endl;
-  //   }
-  // }
+//     this->horses.emplace_back(_name, _win_odds, _place_odds);
+//   }
 
-  // use same order to input more horse data, Horse& horse : horses
-  // for (std::string t : win_odds) {
-  //   std::cout << t << std::endl;
-  // }
-  */
+//   // set positions
+//   int _position = 1;
+//   if (ordered_winning_names.size() == 0) {
+//     this->race_complete = false;
+//   } else {
+//     this->race_complete = true;
+
+//     for (std::string _pos_name : this->ordered_winning_names) {
+//       for (Horse& _horse : this->horses) {
+//         if (_pos_name == _horse.name) {
+//           _horse.set_position(_position);
+//         }
+//       }
+//       _position++;
+//     }
+//   }
+
+//   return;
+// }
+
+*/
