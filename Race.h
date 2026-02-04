@@ -16,8 +16,9 @@ class Race {
   std::string url;
   const char* html;
   GumboOutput* gumbo_output;
+  bool data_downloaded;
 
-  // raw data
+  // raw data - all in same order (as per the way it is parsed from the html)
   // std::vector<const char*> name_reffs;
   bool race_complete;
   std::vector<std::string> names;
@@ -26,6 +27,17 @@ class Race {
   std::vector<std::string> place_odds;
   std::vector<float> win_odds_f;
   std::vector<float> place_odds_f;
+
+  std::vector<std::string> jockey;
+  std::vector<std::string> weight;
+
+  std::vector<std::vector<std::string>> flucs;  // open, 1, and 2
+  std::vector<std::string> fluc_opens;
+  std::vector<std::string> fluc_1s;
+  std::vector<std::string> fluc_2s;
+  std::vector<float> fluc_opens_f;
+  std::vector<float> fluc_1s_f;
+  std::vector<float> fluc_2s_f;
 
   // nice data
   std::string race_name;
@@ -65,6 +77,7 @@ class Race {
   const char* get_html();
   std::string get_url();
   bool is_race_complete();
+  bool is_data_dowloaded();
   std::vector<Horse> get_horses();
   std::vector<std::string> get_names();
   std::vector<std::string> get_win_odds();

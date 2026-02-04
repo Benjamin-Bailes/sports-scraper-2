@@ -40,6 +40,12 @@ Race::Race(std::string _url, const char* _html) {
   if (!this->gumbo_output) return;
 
   get_initial_data();
+  // crude check that html was succesfully retrieved
+  if (this->names.empty()) {
+    this->data_downloaded = false;
+  } else {
+    this->data_downloaded = true;
+  }
   clean_data();
   construct_horses();
 }
@@ -52,6 +58,7 @@ Race::~Race() {
 const char* Race::get_html() { return this->html; }
 std::string Race::get_url() { return this->url; }
 bool Race::is_race_complete() { return this->race_complete; }
+bool Race::is_data_dowloaded() { return this->data_downloaded; }
 std::vector<Horse> Race::get_horses() { return this->horses; }
 std::vector<std::string> Race::get_names() { return this->names; }
 std::vector<std::string> Race::get_win_odds() { return this->win_odds; }
@@ -65,16 +72,31 @@ void Race::get_initial_data() {
   if (root_node->type != GUMBO_NODE_ELEMENT) return;
 
   const char att[] = "data-automation-id";
+  const char class_att[] = "class";
+
+  const char racecard_att_val[] = "racecard-body";
+  const char racecard_outcome_att_val[] = "outcomeCard_f7jc198";
+
   const char name_att_val[] = "racecard-outcome-name";
   const char win_odds_att_val[] = "racecard-outcome-0-L-price";
   const char place_odds_att_val[] = "racecard-outcome-1-L-price";
+  const char flucs_att_val[] = "priceFlucsContainer_f1qh6j2w";
 
   // get half way down tree first. This ensures duplicate names (and stats) are not picked up from other nodes
-  char racecard_att_val[] = "racecard-body";
   GumboNode* racecard_node = get_div(root_node, att, racecard_att_val);
-  search_in_divs(racecard_node, this->names, att, name_att_val);
-  search_in_divs(racecard_node, this->win_odds, att, win_odds_att_val);
-  search_in_divs(racecard_node, this->place_odds, att, place_odds_att_val);
+
+  std::vector<GumboNode*> racecard_outcomes;
+  get_all_divs(racecard_node, racecard_outcomes, class_att, racecard_outcome_att_val);
+
+  for (auto& racecard_outcome : racecard_outcomes) {
+    search_in_divs(racecard_outcome, this->names, att, name_att_val);
+    search_in_divs(racecard_outcome, this->win_odds, att, win_odds_att_val);
+    search_in_divs(racecard_outcome, this->place_odds, att, place_odds_att_val);
+
+    std::vector<std::string> curr_flucs;
+    search_in_divs(racecard_outcome, curr_flucs, att, flucs_att_val);
+    this->flucs.emplace_back(curr_flucs);
+  }
 
   // top 4 positions, displayed in order, contained in top div of racecard
   GumboNode* racecard_positions_node = get_div(root_node, "class", "container_fqa53j6");
@@ -131,22 +153,38 @@ void Race::clean_data() {
     }
   }
 
+  // clean flucs
+  for (auto fluc : this->flucs) {
+    this->fluc_opens.push_back(fluc[0]);
+    this->fluc_1s.push_back(fluc[1]);
+    this->fluc_2s.push_back(fluc[2]);
+
+    this->fluc_opens_f.push_back(std::stof(fluc[0]));
+    this->fluc_1s_f.push_back(std::stof(fluc[1]));
+    this->fluc_2s_f.push_back(std::stof(fluc[2]));
+  }
+
   return;
 }
 
 void Race::construct_horses() {
-  std::string _name;
-  std::string _win_odds, _place_odds;
+  // std::string _name;
+  // std::string _win_odds, _place_odds;
+  // std::string _fluc_opens,
   // float _win_odds_f, _place_odds_f;
 
   for (int i = 0; i < names.size(); i++) {
-    _name = (!this->names[i].empty()) ? this->names[i] : "";
+    std::string _name = (!this->names[i].empty()) ? this->names[i] : "";
     // _win_odds_f = win_odds_f[i] ? win_odds_f[i] : 0;
     // _place_odds_f = place_odds_f[i] ? place_odds_f[i] : 0;
-    _win_odds = (i < win_odds.size()) ? win_odds[i] : "";
-    _place_odds = (i < place_odds.size()) ? place_odds[i] : "";
+    std::string _win_odds = (i < win_odds.size()) ? win_odds[i] : "";
+    std::string _place_odds = (i < place_odds.size()) ? place_odds[i] : "";
 
-    this->horses.emplace_back(_name, _win_odds, _place_odds);
+    std::string _fluc_opens = (i < fluc_opens.size()) ? fluc_opens[i] : "";
+    std::string _fluc_1s = (i < fluc_1s.size()) ? fluc_1s[i] : "";
+    std::string _fluc_2s = (i < fluc_2s.size()) ? fluc_2s[i] : "";
+
+    this->horses.emplace_back(_name, _win_odds, _place_odds, _fluc_opens, _fluc_1s, _fluc_2s);
   }
 
   // set positions

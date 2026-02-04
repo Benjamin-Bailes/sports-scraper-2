@@ -15,14 +15,16 @@
 #include "retrievehtml.hpp"
 
 int main() {
-  // today page
-  const char url[] = "https://www.sportsbet.com.au/racing-schedule/horse/today";
-  char* todays_html = static_cast<char*>(std::malloc(1));  // char* todays_html = (char*)malloc(1);
+  //
+  //
+  // get links to each race from 'today' page
+  // const char url[] = "https://www.sportsbet.com.au/racing-schedule/horse/today";
+  const char url[] = "https://www.sportsbet.com.au/racing-schedule/results/2026-01-27";
+  char* todays_html = static_cast<char*>(std::malloc(1));
   if (!todays_html) return 1;
   todays_html[0] = '\0';
   retrieve_html(todays_html, url);
-
-  // parse links to all races
+  // parse for links to all races
   GumboOutput* output = gumbo_parse(todays_html);
   free(todays_html);
   if (!output) return 1;
@@ -85,62 +87,50 @@ int main() {
   //
   */
 
+  //
+  //
   // get html asynchronously from each race page
   std::vector<Request> requests = asyncdownloads(links);
   std::cout << "\n";
-  // for (auto request : requests) {
-  //   std::cout << "Downloaded from: " << request.url << "\n";
-  //   std::cout << "Size: " << request.html.size() << " bytes\n\n";
-  // }
 
+  //
+  //
+  // create race objects, where parsing happens
   int num_races = requests.size();
   int i = 0;
   std::vector<Race> races;
   for (auto& request : requests) {
-    races.emplace_back(request.url, request.html.c_str());
-    std::cout << "\33[2K\rparsing: " << static_cast<float>(i) / num_races * 100 << "%" << std::flush;
+    races.emplace_back(request.url, request.html.c_str());  // calls constructor
+    std::cout << "\33[2K\rparsing: " << ceil(static_cast<float>(i) / num_races * 100) << "%" << std::flush;
     i++;
   }
   std::cout << "\n";
 
   //
   //
-  // for (int i = 0; i < 10; i++) {
-  //   std::string name;
-  //   name = "out/page" + std::to_string(i) + ".html";
-  //   std::string total = requests[i].url + requests[i].html;
-  //   FILE* out = fopen(name.c_str(), "wb");  // write binary output
-  //   if (!out) return 1;
-  //   fprintf(out, "%s", total.c_str());
-  //   fclose(out);
-  // }
-  //
-  //
-
+  // write data to file
   std::ofstream output_file;
-  output_file.open("out/data3.csv");
+  output_file.open("out/data4.csv");
 
   i = 0;
   std::string race_url;
-  std::string row = "name, win odds, place odds, position, race url\n";
+  std::string row = "name, win odds, place odds, position, fluc open, fluc 1, fluc 2, race url,\n";
   output_file << row;
-
   for (Race& race : races) {
     row.clear();
     race_url.clear();
     race_url = race.get_url();
 
-    if (race.is_race_complete()) {
+    if (race.is_race_complete() && race.is_data_dowloaded()) {
       for (Horse& horse : race.get_horses()) {
-        row = horse.name + "," + horse.win_odds + "," + horse.place_odds + "," + std::to_string(horse.position) + "," + race_url + "\n";
+        row = horse.name + "," + horse.win_odds + "," + horse.place_odds + "," + std::to_string(horse.position) + "," + horse.fluc_open + "," + horse.fluc_1 + "," + horse.fluc_2 + "," + race_url + "\n";
         output_file << row;
       }
-    } else {
-      row = "XX,XX,XX,XX," + race_url + "," + std::string(race.get_html(), 0, 41) + "\n";
-      output_file << row;
+    } else if (!race.is_data_dowloaded()) {
+      std::cout << "data not dowloaded for" + race.get_url() << std::endl;
     }
 
-    std::cout << "\33[2K\ruploading: " << static_cast<float>(i) / num_races * 100 << "%" << std::flush;
+    std::cout << "\33[2K\ruploading: " << ceil(static_cast<float>(i) / num_races * 100) << "%" << std::flush;
     i++;
   }
 
