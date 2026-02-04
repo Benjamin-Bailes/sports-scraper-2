@@ -51,9 +51,6 @@ const char* Race::get_html() { return this->html; }
 std::string Race::get_url() { return this->url; }
 bool Race::is_race_complete() { return this->race_complete; }
 std::vector<Horse> Race::get_horses() { return this->horses; }
-// std::vector<std::string> Race::get_names() { return this->names; }
-// std::vector<std::string> Race::get_win_odds() { return this->win_odds; }
-// std::vector<std::string> Race::get_place_names() { return this->place_odds; }
 
 //
 // protected
@@ -72,6 +69,8 @@ void Race::get_data() {
   const char win_odds_att_val[] = "racecard-outcome-0-L-price";
   const char place_odds_att_val[] = "racecard-outcome-1-L-price";
   const char flucs_att_val[] = "priceFlucsContainer_f1qh6j2w";
+  const char jockey_att_val[] = "runnerJockeyInfoDesktop_fmumgvr";
+  const char weight_att_val[] = "runnerInfoCont_f1op6hsi";
 
   // get half way down tree first. This ensures duplicate names (and stats) are not picked up from other nodes
   GumboNode* racecard_node = get_div(root_node, att, racecard_att_val);
@@ -79,11 +78,14 @@ void Race::get_data() {
   std::vector<GumboNode*> racecard_outcomes;
   get_all_divs(racecard_node, racecard_outcomes, class_att, racecard_outcome_att_val);
 
+  //
   // constuct horses
   for (auto& racecard_outcome : racecard_outcomes) {
     std::string _name = get_text_from_first_div(racecard_outcome, att, name_att_val);
     std::string _win_odds = get_text_from_first_div(racecard_outcome, att, win_odds_att_val);
     std::string _place_odds = get_text_from_first_div(racecard_outcome, att, place_odds_att_val);
+    std::string _jockey = get_text_from_first_div(racecard_outcome, class_att, jockey_att_val);
+    std::string _weight = get_text_from_first_div(racecard_outcome, class_att, weight_att_val);
 
     std::vector<std::string> curr_flucs;
     search_in_divs(racecard_outcome, curr_flucs, class_att, flucs_att_val);
@@ -95,9 +97,12 @@ void Race::get_data() {
         horses.back().set_fluc_1(curr_flucs[1]);
         horses.back().set_fluc_2(curr_flucs[2]);
       }
+      horses.back().set_jockey(_jockey);
+      horses.back().set_weight(_weight);
     }
   }
 
+  //
   // top 4 positions, displayed in order, contained in top div of racecard
   GumboNode* racecard_positions_node = get_div(root_node, "class", "container_fqa53j6");
 

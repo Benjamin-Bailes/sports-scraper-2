@@ -15,6 +15,9 @@ class Horse {
   std::string fluc_1;
   std::string fluc_2;
 
+  std::string jockey;
+  std::string weight;
+
   std::string position;
 
  public:
@@ -29,6 +32,8 @@ class Horse {
   void set_fluc_1(std::string _fluc_1);
   void set_fluc_2(std::string _fluc_2);
   void set_position(std::string _position);
+  void set_jockey(std::string _jockey);
+  void set_weight(std::string _weight);
 
   // get
   std::string get_name();
@@ -38,6 +43,8 @@ class Horse {
   std::string get_fluc_1();
   std::string get_fluc_2();
   std::string get_position();
+  std::string get_jockey();
+  std::string get_weight();
 };
 
 #endif
